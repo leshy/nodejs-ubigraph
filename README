@@ -2,6 +2,5 @@ nodejs ubigraph interface, made in an hour as a helper in a project..
 heavy use of async lib to make it as fast as possible.
 
 
-visualise is the function you care about, it accepts an array of nodes,
-
-node being defined as an object with name attr and parents() method that returns parent/child/whatever? nodes
+visualise is the function you care about, it accepts a graph node
+graph node being defined as an object with name() and getchildren() methods
