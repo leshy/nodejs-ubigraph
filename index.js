@@ -39,7 +39,7 @@ ubi('new_edge_style',[0],function(error,edgeid) {
         ubi('set_edge_style_attribute',[edgeid,'color','#445544']);
 //        ubi('set_edge_style_attribute',[edgeid,'spline','true']);
         ubi('set_edge_style_attribute',[edgeid,'arrow','true']);
-        ubi('set_edge_style_attribute',[edgeid,'arrow_radius','1.5']);
+        ubi('set_edge_style_attribute',[edgeid,'arrow_radius','0.4']);
         ubi('set_edge_style_attribute',[edgeid,'arrow_length','2.0']);
         ubi('set_edge_style_attribute',[edgeid,'strength','0.1']);
         ubi('set_edge_style_attribute',[edgeid,'fontfamily','Fixed'],function() { cb(callback,null,edgeid); });
@@ -56,8 +56,8 @@ function addvertex(label,callback) {
 }
 
 
-function addedge(node1,node2,callback) {
-    console.log('connecting',node1.name(),'->',node2.name());
+function addedge(node1,node2,namef,callback) {
+    console.log('connecting',namef(node1),'->',namef(node2));
     ubi('new_edge', [node2.vertexid, node1.vertexid],function(err,edgeid) {
         ubi('change_edge_style',[edgeid,0],callback);
     });
@@ -70,19 +70,22 @@ function addnodes(nodes,callback) {
     var nodefunctions = _.map(nodes, function(node) {
         return function(callback) { addvertex(node.name,function(err,id) { node.vertexid = id; callback(err,id); }); };
     });
-    
     async.parallel(nodefunctions,callback);
 }
 
-function breadthf_addnodes(node,callback) {
+function breadthf_addnodes(node,childrenf,namef,callback) {    
+    if (!namef) { namef = function (node) { return node.name() } }
+    if (!childrenf) { childrenf = function (node) { return node.getchildren() } }
+    if (node.vertexid) { return callback() }
 
-    addvertex(node.name(),function(err,id) {
+    addvertex(namef(node),function(err,id) {
+
         node.vertexid = id;
 
-        var nodefunctions = _.map(node.getchildren(), function(child) {
+        var nodefunctions = _.map(childrenf(node), function(child) {
             return function(callback) { 
-                breadthf_addnodes(child,function() {
-                    addedge(node,child,callback);
+                breadthf_addnodes(child,childrenf,namef,function() {
+                  addedge(node,child,namef,callback);
                 });
             }
         });
@@ -92,7 +95,9 @@ function breadthf_addnodes(node,callback) {
 
 
 // requires only that each node has name property and parents() call
-exports.visualise = function(node,callback) {
+exports.visualize = function(node,childrenf,namef,callback) {
+    console.log("visualize");
+
     async.series([
 
         // clear graph
@@ -102,7 +107,7 @@ exports.visualise = function(node,callback) {
         function(callback) { async.parallel([vertexstyle,edgestyle], callback); },
         
         // add nodes
-        function(callback) { breadthf_addnodes(node,callback) }
+        function(callback) { breadthf_addnodes(node,childrenf,namef,callback) }
     ], callback );
 }
 
